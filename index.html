@@ -618,20 +618,56 @@ async function analyzeGames() {
     try {
 
         const response =
-            await fetch("/api/games", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
+    await fetch(
+        "/api/games",
+        {
+            method: "POST",
+
+            headers: {
+                "Content-Type":
+                    "application/json"
+            },
+
+            body:
+                JSON.stringify({
                     games,
-                    requirement_type: requirementType
+                    requirement_type:
+                        requirementType
                 })
-            });
+        }
+    );
 
+    const responseText =
+        await response.text();
 
-        const data =
-            await response.json();
+    console.log(
+        "API /api/games:",
+        response.status,
+        responseText
+    );
+
+    if (!response.ok) {
+
+        throw new Error(
+            `Erro da API (${response.status}): ${responseText}`
+        );
+    }
+
+    let data;
+
+    try {
+
+        data =
+            JSON.parse(responseText);
+
+    } catch (error) {
+
+        throw new Error(
+            "A API não retornou JSON: "
+            + responseText
+        );
+
+    }
 
 
         if (data.error) {
@@ -1132,8 +1168,37 @@ async function searchBenchmarks() {
             });
 
 
-        const data =
-            await response.json();
+        const responseText =
+    await response.text();
+
+    console.log(
+        "API /api/benchmark:",
+        response.status,
+        responseText
+    );
+
+    if (!response.ok) {
+
+        throw new Error(
+            `Erro da API (${response.status}): ${responseText}`
+        );
+    }
+
+    let data;
+
+    try {
+
+        data =
+            JSON.parse(responseText);
+
+    } catch (error) {
+
+        throw new Error(
+            "A API não retornou JSON: "
+            + responseText
+        );
+
+    }
 
 
         if (data.error) {
