@@ -1,8 +1,12 @@
 {
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index.py"
+      "source": "/api/games",
+      "destination": "/api/games.py"
+    },
+    {
+      "source": "/api/benchmark",
+      "destination": "/api/benchmark.py"
     }
   ]
 }
