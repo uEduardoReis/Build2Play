@@ -618,29 +618,16 @@ async function analyzeGames() {
     try {
 
         const response =
-            await fetch(
-                "/api/games",
-                {
-
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body:
-                        JSON.stringify({
-
-                            games,
-
-                            requirement_type:
-                                requirementType
-
-                        })
-
-                }
-            );
+            await fetch("/api/games", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    games,
+                    requirement_type: requirementType
+                })
+            });
 
 
         const data =
@@ -1128,39 +1115,21 @@ async function searchBenchmarks() {
     try {
 
         const response =
-            await fetch(
-                "/api/benchmark",
-                {
-
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body:
-                        JSON.stringify({
-
-                            game,
-
-                            cpu,
-
-                            gpu,
-
-                            ram,
-
-                            resolution,
-
-                            quality,
-
-                            target_fps:
-                                target
-
-                        })
-
-                }
-            );
+            await fetch("/api/benchmark", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    game,
+                    cpu,
+                    gpu,
+                    ram,
+                    resolution,
+                    quality,
+                    target_fps: target
+                })
+            });
 
 
         const data =
