@@ -1,9 +1,6 @@
-from flask import Flask, request, jsonify
+import os
 import requests
 import re
-import os
-
-app = Flask(__name__)
 
 RAWG_API_KEY = os.environ.get("RAWG_API_KEY")
 
@@ -67,13 +64,8 @@ def get_pc_requirements(game):
                 {}
             )
 
-            minimum = requirements.get(
-                "minimum"
-            )
-
-            recommended = requirements.get(
-                "recommended"
-            )
+            minimum = requirements.get("minimum")
+            recommended = requirements.get("recommended")
 
             break
 
@@ -106,7 +98,6 @@ def parse_requirements(text):
 
         lower = line.lower()
 
-        # CPU
         if any(x in lower for x in [
             "processor",
             "cpu",
@@ -114,22 +105,15 @@ def parse_requirements(text):
             "amd ryzen"
         ]):
 
-            if ":" in line:
-
-                value = line.split(
-                    ":",
-                    1
-                )[1].strip()
-
-            else:
-
-                value = line
+            value = (
+                line.split(":", 1)[1].strip()
+                if ":" in line
+                else line
+            )
 
             if not result["cpu"]:
-
                 result["cpu"] = value
 
-        # GPU
         elif any(x in lower for x in [
             "graphics",
             "gpu",
@@ -139,22 +123,15 @@ def parse_requirements(text):
             "radeon"
         ]):
 
-            if ":" in line:
-
-                value = line.split(
-                    ":",
-                    1
-                )[1].strip()
-
-            else:
-
-                value = line
+            value = (
+                line.split(":", 1)[1].strip()
+                if ":" in line
+                else line
+            )
 
             if not result["gpu"]:
-
                 result["gpu"] = value
 
-        # RAM
         elif (
             "memory" in lower
             or "ram" in lower
@@ -166,12 +143,10 @@ def parse_requirements(text):
             )
 
             if match:
-
                 result["ram"] = int(
                     match.group(1)
                 )
 
-        # STORAGE
         elif (
             "storage" in lower
             or "hard drive" in lower
@@ -190,7 +165,6 @@ def parse_requirements(text):
                 )
 
                 if match.group(2) == "tb":
-
                     value *= 1024
 
                 result["storage"] = value
@@ -198,23 +172,19 @@ def parse_requirements(text):
     return result
 
 
-@app.route("/", methods=["GET"])
-def home():
+def handler(request):
 
-    return jsonify({
-        "status": "GameBench RAWG API online"
-    })
+    if request.method != "POST":
 
-
-@app.route("/games", methods=["POST"])
-def games():
+        return {
+            "error": "Method not allowed"
+        }, 405
 
     if not RAWG_API_KEY:
 
-        return jsonify({
-            "error":
-                "RAWG_API_KEY não configurada."
-        }), 500
+        return {
+            "error": "RAWG_API_KEY não configurada"
+        }, 500
 
     data = request.get_json()
 
@@ -261,13 +231,11 @@ def games():
                 recommended_raw
             )
 
-            if requirement_type == "minimum":
-
-                selected = minimum
-
-            else:
-
-                selected = recommended
+            selected = (
+                minimum
+                if requirement_type == "minimum"
+                else recommended
+            )
 
             results.append({
 
@@ -305,12 +273,7 @@ def games():
 
             })
 
-    return jsonify({
-
-        "games":
-            results,
-
-        "requirement_type":
-            requirement_type
-
-    })
+    return {
+        "games": results,
+        "requirement_type": requirement_type
+    }
