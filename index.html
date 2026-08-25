@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width,
+               initial-scale=1.0">
+
+<title>GameBench</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+
+    margin: 0;
+
+    background: #090b10;
+
+    color: #f1f3f6;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+}
+
+.container {
+
+    max-width: 1000px;
+
+    margin: auto;
+
+    padding: 35px 20px 80px;
+}
+
+header {
+
+    margin-bottom: 30px;
+}
+
+header h1 {
+
+    margin: 0;
+
+    font-size: 38px;
+}
+
+header p {
+
+    color: #89919f;
+
+    margin-top: 8px;
+}
+
+.card {
+
+    background: #11151d;
+
+    border: 1px solid #252b36;
+
+    border-radius: 14px;
+
+    padding: 22px;
+
+    margin-bottom: 18px;
+}
+
+h2 {
+
+    margin-top: 0;
+}
+
+.muted {
+
+    color: #89919f;
+}
+
+input,
+select {
+
+    width: 100%;
+
+    padding: 12px;
+
+    margin-top: 7px;
+
+    margin-bottom: 12px;
+
+    border-radius: 8px;
+
+    border: 1px solid #303744;
+
+    background: #090c11;
+
+    color: white;
+}
+
+button {
+
+    width: 100%;
+
+    padding: 13px;
+
+    border: none;
+
+    border-radius: 8px;
+
+    background: #e8ecf2;
+
+    color: #080a0e;
+
+    font-weight: bold;
+
+    cursor: pointer;
+
+    margin-top: 5px;
+}
+
+button:hover {
+
+    opacity: .9;
+}
+
+.requirement-selector {
+
+    display: grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap: 10px;
+
+    margin: 18px 0;
+}
+
+.requirement-selector label {
+
+    padding: 14px;
+
+    border: 1px solid #303744;
+
+    border-radius: 8px;
+
+    cursor: pointer;
+
+    text-align: center;
+
+    color: #aeb5c0;
+}
+
+.requirement-selector input {
+
+    width: auto;
+
+    margin: 0 5px 0 0;
+}
+
+.game {
+
+    background: #0c1016;
+
+    border: 1px solid #252c38;
+
+    border-radius: 10px;
+
+    padding: 14px;
+
+    margin-top: 12px;
+}
+
+.game img {
+
+    width: 100%;
+
+    max-height: 140px;
+
+    object-fit: cover;
+
+    border-radius: 7px;
+
+    margin-bottom: 10px;
+}
+
+.game h3 {
+
+    margin: 0 0 12px;
+}
+
+.specs {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 8px;
+}
+
+.spec {
+
+    background: #151a23;
+
+    border-radius: 7px;
+
+    padding: 10px;
+}
+
+.spec small {
+
+    display: block;
+
+    color: #747d8d;
+
+    margin-bottom: 5px;
+}
+
+.spec strong {
+
+    font-size: 13px;
+}
+
+.recommended {
+
+    border: 1px solid #343b49;
+
+    background: #0d1117;
+
+    border-radius: 10px;
+
+    padding: 18px;
+
+    margin-top: 15px;
+}
+
+.pc-title {
+
+    font-size: 20px;
+
+    margin-bottom: 14px;
+}
+
+.benchmark {
+
+    border-top: 1px solid #292f39;
+
+    padding-top: 15px;
+
+    margin-top: 15px;
+}
+
+.benchmark-content {
+
+    display: grid;
+
+    grid-template-columns:
+        190px 1fr;
+
+    gap: 15px;
+}
+
+.thumbnail {
+
+    width: 100%;
+
+    border-radius: 8px;
+}
+
+.benchmark h3 {
+
+    font-size: 15px;
+
+    margin: 0 0 8px;
+}
+
+.benchmark a {
+
+    color: #9dc3ff;
+
+    text-decoration: none;
+}
+
+.fps {
+
+    font-size: 34px;
+
+    font-weight: bold;
+
+    margin: 12px 0;
+}
+
+.good {
+
+    color: #80dd98;
+}
+
+.bad {
+
+    color: #ff8787;
+}
+
+.warning {
+
+    color: #ffd277;
+}
+
+.loading {
+
+    color: #89919f;
+
+    padding: 15px 0;
+}
+
+.error {
+
+    color: #ff8585;
+
+    padding: 10px 0;
+}
+
+details {
+
+    margin-top: 10px;
+
+    color: #9ca4b1;
+}
+
+pre {
+
+    white-space: pre-wrap;
+
+    background: #080b10;
+
+    padding: 10px;
+
+    border-radius: 7px;
+
+    font-size: 12px;
+}
+
+@media(max-width: 650px) {
+
+    .specs {
+
+        grid-template-columns:
+            1fr;
+    }
+
+    .benchmark-content {
+
+        grid-template-columns:
+            1fr;
+    }
+
+    .requirement-selector {
+
+        grid-template-columns:
+            1fr;
+    }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+
+<header>
+
+<h1>🎮 GameBench</h1>
+
+<p>
+Monte uma configuração baseada nos seus jogos
+e encontre benchmarks reais para testá-la.
+</p>
+
+</header>
+
+
+<!-- =====================================================
+     JOGOS
+====================================================== -->
+
+<section class="card">
+
+<h2>1. Escolha seus jogos</h2>
+
+<p class="muted">
+
+Você pode informar até três jogos.
+
+</p>
+
+
+<input
+    id="game1"
+    placeholder="Cyberpunk 2077">
+
+
+<input
+    id="game2"
+    placeholder="Black Myth: Wukong">
+
+
+<input
+    id="game3"
+    placeholder="Elden Ring">
+
+
+<div class="requirement-selector">
+
+<label>
+
+<input
+    type="radio"
+    name="requirements"
+    value="minimum">
+
+Mínimos
+
+</label>
+
+
+<label>
+
+<input
+    type="radio"
+    name="requirements"
+    value="recommended"
+    checked>
+
+Recomendados
+
+</label>
+
+</div>
+
+
+<button onclick="analyzeGames()">
+
+ANALISAR
+
+</button>
+
+
+<div id="gamesResult"></div>
+
+</section>
+
+
+
+<!-- =====================================================
+     TESTE
+====================================================== -->
+
+<section
+    class="card"
+    id="testSection"
+    style="display:none;">
+
+<h2>2. Testar configuração</h2>
+
+<p class="muted">
+
+A configuração abaixo foi preenchida
+automaticamente com base nos jogos escolhidos.
+
+</p>
+
+
+<label>Jogo</label>
+
+<select id="benchmarkGame"></select>
+
+
+<label>CPU</label>
+
+<input
+    id="benchmarkCPU">
+
+
+<label>GPU</label>
+
+<input
+    id="benchmarkGPU">
+
+
+<label>RAM</label>
+
+<input
+    id="benchmarkRAM">
+
+
+<label>Resolução</label>
+
+<select id="resolution">
+
+<option>1080p</option>
+
+<option selected>1440p</option>
+
+<option>4K</option>
+
+</select>
+
+
+<label>Qualidade</label>
+
+<select id="quality">
+
+<option>Low</option>
+
+<option>Medium</option>
+
+<option selected>High</option>
+
+<option>Ultra</option>
+
+</select>
+
+
+<label>FPS alvo</label>
+
+<input
+    id="targetFPS"
+    type="number"
+    value="60">
+
+
+<button onclick="searchBenchmarks()">
+
+🔎 PESQUISAR BENCHMARKS
+
+</button>
+
+
+<div id="benchmarkResult"></div>
+
+</section>
+
+
+</div>
+
+
+
+<script>
+
+let gamesData = [];
+
+let recommendedPC = {};
+
+
+
+// ========================================================
+// ANALISAR JOGOS
+// ========================================================
+
+async function analyzeGames() {
+
+    const games = [
+
+        document
+            .getElementById("game1")
+            .value
+            .trim(),
+
+        document
+            .getElementById("game2")
+            .value
+            .trim(),
+
+        document
+            .getElementById("game3")
+            .value
+            .trim()
+
+    ].filter(Boolean);
+
+
+    if (!games.length) {
+
+        alert(
+            "Informe pelo menos um jogo."
+        );
+
+        return;
+    }
+
+
+    const requirementType =
+        document.querySelector(
+            'input[name="requirements"]:checked'
+        ).value;
+
+
+    const result =
+        document.getElementById(
+            "gamesResult"
+        );
+
+
+    result.innerHTML =
+        `<div class="loading">
+            Buscando requisitos na RAWG...
+        </div>`;
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/games",
+                {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+
+                            games,
+
+                            requirement_type:
+                                requirementType
+
+                        })
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (data.error) {
+
+            throw new Error(
+                data.error
+            );
+        }
+
+
+        gamesData =
+            data.games.filter(
+                game => !game.error
+            );
+
+
+        let html = "";
+
+
+        for (
+            const game
+            of data.games
+        ) {
+
+            if (game.error) {
+
+                html += `
+                    <div class="game">
+                        <div class="error">
+                            ${escapeHtml(
+                                game.name
+                            )}
+                            :
+                            ${escapeHtml(
+                                game.error
+                            )}
+                        </div>
+                    </div>
+                `;
+
+                continue;
+            }
+
+
+            const selected =
+                game.selected || {};
+
+
+            html += `
+
+                <div class="game">
+
+                    ${
+                        game.image
+                        ?
+                        `<img src="${game.image}">`
+                        :
+                        ""
+                    }
+
+                    <h3>
+                        ${escapeHtml(
+                            game.name
+                        )}
+                    </h3>
+
+
+                    <div class="specs">
+
+                        <div class="spec">
+
+                            <small>
+                                CPU
+                            </small>
+
+                            <strong>
+                                ${escapeHtml(
+                                    selected.cpu
+                                    ||
+                                    "Não informado"
+                                )}
+                            </strong>
+
+                        </div>
+
+
+                        <div class="spec">
+
+                            <small>
+                                GPU
+                            </small>
+
+                            <strong>
+                                ${escapeHtml(
+                                    selected.gpu
+                                    ||
+                                    "Não informado"
+                                )}
+                            </strong>
+
+                        </div>
+
+
+                        <div class="spec">
+
+                            <small>
+                                RAM
+                            </small>
+
+                            <strong>
+                                ${
+                                    selected.ram
+                                    ?
+                                    selected.ram
+                                    + " GB"
+                                    :
+                                    "Não informado"
+                                }
+                            </strong>
+
+                        </div>
+
+
+                        <div class="spec">
+
+                            <small>
+                                Armazenamento
+                            </small>
+
+                            <strong>
+                                ${
+                                    selected.storage
+                                    ?
+                                    selected.storage
+                                    + " GB"
+                                    :
+                                    "Não informado"
+                                }
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            `;
+        }
+
+
+        // =================================================
+        // ESCOLHA DA CONFIGURAÇÃO
+        // =================================================
+
+        let cpu = null;
+
+        let gpu = null;
+
+        let ram = 0;
+
+        let storage = 0;
+
+
+        for (
+            const game
+            of gamesData
+        ) {
+
+            const req =
+                game.selected || {};
+
+
+            /*
+             * A lógica é propositalmente simples:
+             *
+             * CPU/GPU:
+             * pega o requisito encontrado
+             * no jogo mais exigente.
+             *
+             * RAM:
+             * pega o maior valor.
+             */
+
+            if (req.cpu) {
+
+                cpu =
+                    req.cpu;
+
+            }
+
+
+            if (req.gpu) {
+
+                gpu =
+                    req.gpu;
+
+            }
+
+
+            if (req.ram) {
+
+                ram =
+                    Math.max(
+                        ram,
+                        req.ram
+                    );
+
+            }
+
+
+            if (req.storage) {
+
+                storage =
+                    Math.max(
+                        storage,
+                        req.storage
+                    );
+
+            }
+
+        }
+
+
+        recommendedPC = {
+
+            cpu:
+                cpu || "Não informado",
+
+            gpu:
+                gpu || "Não informado",
+
+            ram,
+
+            storage
+
+        };
+
+
+        // =================================================
+        // PC
+        // =================================================
+
+        html += `
+
+            <div class="recommended">
+
+                <div class="pc-title">
+
+                    🖥️ Configuração recomendada
+
+                </div>
+
+
+                <div class="specs">
+
+                    <div class="spec">
+
+                        <small>
+                            CPU
+                        </small>
+
+                        <strong>
+                            ${escapeHtml(
+                                recommendedPC.cpu
+                            )}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="spec">
+
+                        <small>
+                            GPU
+                        </small>
+
+                        <strong>
+                            ${escapeHtml(
+                                recommendedPC.gpu
+                            )}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="spec">
+
+                        <small>
+                            RAM
+                        </small>
+
+                        <strong>
+                            ${
+                                ram
+                                ?
+                                ram + " GB"
+                                :
+                                "Não informado"
+                            }
+                        </strong>
+
+                    </div>
+
+
+                    <div class="spec">
+
+                        <small>
+                            Armazenamento
+                        </small>
+
+                        <strong>
+                            ${
+                                storage
+                                ?
+                                storage + " GB"
+                                :
+                                "Não informado"
+                            }
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        `;
+
+
+        result.innerHTML =
+            html;
+
+
+        // =================================================
+        // PREENCHER TESTE
+        // =================================================
+
+        const gameSelect =
+            document.getElementById(
+                "benchmarkGame"
+            );
+
+
+        gameSelect.innerHTML = "";
+
+
+        for (
+            const game
+            of gamesData
+        ) {
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                game.name;
+
+            option.textContent =
+                game.name;
+
+            gameSelect.appendChild(
+                option
+            );
+
+        }
+
+
+        document.getElementById(
+            "benchmarkCPU"
+        ).value =
+            recommendedPC.cpu;
+
+
+        document.getElementById(
+            "benchmarkGPU"
+        ).value =
+            recommendedPC.gpu;
+
+
+        document.getElementById(
+            "benchmarkRAM"
+        ).value =
+            ram
+            ?
+            ram + " GB"
+            :
+            "";
+
+
+        document.getElementById(
+            "testSection"
+        ).style.display =
+            "block";
+
+
+    } catch (error) {
+
+        result.innerHTML = `
+
+            <div class="error">
+
+                Erro:
+                ${escapeHtml(
+                    error.message
+                )}
+
+            </div>
+
+        `;
+
+    }
+
+}
+
+
+
+// ========================================================
+// YOUTUBE
+// ========================================================
+
+async function searchBenchmarks() {
+
+    const game =
+        document.getElementById(
+            "benchmarkGame"
+        ).value;
+
+
+    const cpu =
+        document.getElementById(
+            "benchmarkCPU"
+        ).value;
+
+
+    const gpu =
+        document.getElementById(
+            "benchmarkGPU"
+        ).value;
+
+
+    const ram =
+        document.getElementById(
+            "benchmarkRAM"
+        ).value;
+
+
+    const resolution =
+        document.getElementById(
+            "resolution"
+        ).value;
+
+
+    const quality =
+        document.getElementById(
+            "quality"
+        ).value;
+
+
+    const target =
+        Number(
+            document.getElementById(
+                "targetFPS"
+            ).value
+        );
+
+
+    const result =
+        document.getElementById(
+            "benchmarkResult"
+        );
+
+
+    result.innerHTML =
+        `<div class="loading">
+            Pesquisando benchmarks...
+        </div>`;
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/benchmark",
+                {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+
+                            game,
+
+                            cpu,
+
+                            gpu,
+
+                            ram,
+
+                            resolution,
+
+                            quality,
+
+                            target_fps:
+                                target
+
+                        })
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (data.error) {
+
+            throw new Error(
+                data.error
+            );
+        }
+
+
+        let statusClass =
+            "warning";
+
+
+        if (
+            data.average_fps !== null
+        ) {
+
+            statusClass =
+                data.average_fps >= target
+                ?
+                "good"
+                :
+                "bad";
+
+        }
+
+
+        let html = `
+
+            <div class="recommended">
+
+                <h3>
+                    ${escapeHtml(game)}
+                </h3>
+
+
+                <p class="muted">
+
+                    ${escapeHtml(cpu)}
+                    ·
+                    ${escapeHtml(gpu)}
+                    ·
+                    ${escapeHtml(ram)}
+                    ·
+                    ${resolution}
+                    ·
+                    ${quality}
+
+                </p>
+
+
+                <div
+                    class="fps ${statusClass}">
+
+                    ${
+                        data.average_fps !== null
+                        ?
+                        data.average_fps.toFixed(0)
+                        + " FPS"
+                        :
+                        "Sem dados"
+                    }
+
+                </div>
+
+
+                <p class="${statusClass}">
+
+                    ${escapeHtml(
+                        data.verdict
+                    )}
+
+                </p>
+
+
+                <small class="muted">
+
+                    ${data.videos.length}
+                    benchmark(s) com
+                    informação encontrada.
+
+                </small>
+
+            </div>
+
+        `;
+
+
+        if (
+            data.videos.length === 0
+        ) {
+
+            html += `
+
+                <div class="error">
+
+                    Nenhum vídeo apresentou
+                    informação de FPS
+                    suficiente.
+
+                </div>
+
+            `;
+
+        }
+
+
+        for (
+            const video
+            of data.videos
+        ) {
+
+            html += `
+
+                <div class="benchmark">
+
+                    <div class="benchmark-content">
+
+                        <img
+                            class="thumbnail"
+                            src="${video.thumbnail}">
+
+
+                        <div>
+
+                            <h3>
+
+                                ${escapeHtml(
+                                    video.title
+                                )}
+
+                            </h3>
+
+
+                            <p>
+
+                                ${escapeHtml(
+                                    video.channel
+                                )}
+
+                            </p>
+
+
+                            <p>
+
+                                <strong>
+
+                                    ${
+                                        video.fps
+                                        .map(
+                                            x =>
+                                            x.toFixed(0)
+                                            + " FPS"
+                                        )
+                                        .join(
+                                            " · "
+                                        )
+                                    }
+
+                                </strong>
+
+                            </p>
+
+
+                            <p class="muted">
+
+                                Fonte:
+                                ${
+                                    video.source ===
+                                    "comments"
+                                    ?
+                                    "comentários"
+                                    :
+                                    "título/descrição"
+                                }
+
+                            </p>
+
+
+                            <a
+                                href="https://www.youtube.com/watch?v=${video.id}"
+                                target="_blank">
+
+                                ▶ Ver benchmark
+
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            `;
+
+        }
+
+
+        result.innerHTML =
+            html;
+
+
+    } catch(error) {
+
+        result.innerHTML = `
+
+            <div class="error">
+
+                Erro:
+                ${escapeHtml(
+                    error.message
+                )}
+
+            </div>
+
+        `;
+
+    }
+
+}
+
+
+
+// ========================================================
+// ESCAPE HTML
+// ========================================================
+
+function escapeHtml(text) {
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.textContent =
+        text || "";
+
+    return div.innerHTML;
+
+}
+
+</script>
+
+</body>
+
+</html>

@@ -1,37 +1,47 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, request, jsonify, send_file
 import requests
 import re
 import statistics
 
 app = Flask(__name__)
 
-RAWG_API_KEY = "COLOQUE_SUA_CHAVE_RAWG_AQUI"
-YOUTUBE_API_KEY = "COLOQUE_SUA_CHAVE_YOUTUBE_AQUI"
+# ==========================================================
+# CONFIGURAÇÃO
+# ==========================================================
+
+RAWG_API_KEY = ""
+YOUTUBE_API_KEY = ""
 
 RAWG_URL = "https://api.rawg.io/api"
 YOUTUBE_URL = "https://www.googleapis.com/youtube/v3"
 
 
+# ==========================================================
+# FRONTEND
+# ==========================================================
+
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return send_file("index.html")
 
 
-# ---------------------------------------------------------
+# ==========================================================
 # RAWG
-# ---------------------------------------------------------
+# ==========================================================
 
-def search_rawg_game(game_name):
-    url = f"{RAWG_URL}/games"
+def rawg_search(game_name):
 
-    params = {
-        "key": RAWG_API_KEY,
-        "search": game_name,
-        "search_precise": "true",
-        "page_size": 5
-    }
+    response = requests.get(
+        f"{RAWG_URL}/games",
+        params={
+            "key": RAWG_API_KEY,
+            "search": game_name,
+            "search_precise": "true",
+            "page_size": 5
+        },
+        timeout=15
+    )
 
-    response = requests.get(url, params=params, timeout=15)
     response.raise_for_status()
 
     data = response.json()
@@ -42,56 +52,55 @@ def search_rawg_game(game_name):
     return data["results"][0]
 
 
-def get_rawg_game(game_id):
-    url = f"{RAWG_URL}/games/{game_id}"
+def rawg_game(game_id):
 
-    params = {
-        "key": RAWG_API_KEY
-    }
+    response = requests.get(
+        f"{RAWG_URL}/games/{game_id}",
+        params={
+            "key": RAWG_API_KEY
+        },
+        timeout=15
+    )
 
-    response = requests.get(url, params=params, timeout=15)
     response.raise_for_status()
 
     return response.json()
 
 
-def extract_pc_requirements(game):
+# ==========================================================
+# EXTRAÇÃO DOS REQUISITOS RAWG
+# ==========================================================
+
+def get_pc_requirements(game):
+
     minimum = None
     recommended = None
 
-    for platform_data in game.get("platforms", []):
-        platform = platform_data.get("platform", {})
+    for platform in game.get("platforms", []):
 
-        if platform.get("slug") != "pc":
-            continue
+        platform_info = platform.get("platform", {})
 
-        requirements = platform_data.get("requirements") or {}
+        if platform_info.get("slug") == "pc":
 
-        minimum = requirements.get("minimum")
-        recommended = requirements.get("recommended")
+            requirements = platform.get(
+                "requirements",
+                {}
+            )
 
-        break
+            minimum = requirements.get(
+                "minimum"
+            )
 
-    return {
-        "minimum": minimum,
-        "recommended": recommended
-    }
+            recommended = requirements.get(
+                "recommended"
+            )
+
+            break
+
+    return minimum, recommended
 
 
-# ---------------------------------------------------------
-# PARSER DOS REQUISITOS
-# ---------------------------------------------------------
-
-def parse_requirement_text(text):
-    if not text:
-        return {
-            "cpu": None,
-            "gpu": None,
-            "ram": None,
-            "storage": None
-        }
-
-    text = text.replace("\r", "\n")
+def parse_requirements(text):
 
     result = {
         "cpu": None,
@@ -100,48 +109,101 @@ def parse_requirement_text(text):
         "storage": None
     }
 
-    lines = [line.strip() for line in text.split("\n") if line.strip()]
+    if not text:
+        return result
+
+    lines = text.replace(
+        "\r",
+        "\n"
+    ).split("\n")
 
     for line in lines:
 
+        line = line.strip()
+
+        if not line:
+            continue
+
         lower = line.lower()
+
+        # CPU
 
         if any(x in lower for x in [
             "processor",
             "cpu",
             "intel core",
-            "amd ryzen"
+            "amd ryzen",
+            "intel"
         ]):
+
             if ":" in line:
-                result["cpu"] = line.split(":", 1)[1].strip()
+                value = line.split(
+                    ":",
+                    1
+                )[1].strip()
             else:
-                result["cpu"] = line
+                value = line
+
+            if not result["cpu"]:
+                result["cpu"] = value
+
+        # GPU
 
         elif any(x in lower for x in [
             "graphics",
             "gpu",
             "video card",
             "nvidia geforce",
-            "amd radeon",
-            "radeon",
-            "geforce"
+            "geforce",
+            "radeon"
         ]):
+
             if ":" in line:
-                result["gpu"] = line.split(":", 1)[1].strip()
+                value = line.split(
+                    ":",
+                    1
+                )[1].strip()
             else:
-                result["gpu"] = line
+                value = line
 
-        elif "memory" in lower or "ram" in lower:
-            match = re.search(r"(\d+)\s*gb", lower)
+            if not result["gpu"]:
+                result["gpu"] = value
+
+        # RAM
+
+        elif (
+            "memory" in lower
+            or "ram" in lower
+        ):
+
+            match = re.search(
+                r"(\d+)\s*gb",
+                lower
+            )
 
             if match:
-                result["ram"] = int(match.group(1))
+                result["ram"] = int(
+                    match.group(1)
+                )
 
-        elif "storage" in lower or "hard drive" in lower:
-            match = re.search(r"(\d+)\s*(gb|tb)", lower)
+        # STORAGE
+
+        elif (
+            "storage" in lower
+            or "hard drive" in lower
+            or "hard disk" in lower
+        ):
+
+            match = re.search(
+                r"(\d+)\s*(gb|tb)",
+                lower
+            )
 
             if match:
-                value = int(match.group(1))
+
+                value = int(
+                    match.group(1)
+                )
 
                 if match.group(2) == "tb":
                     value *= 1024
@@ -151,51 +213,223 @@ def parse_requirement_text(text):
     return result
 
 
-# ---------------------------------------------------------
-# YOUTUBE
-# ---------------------------------------------------------
+# ==========================================================
+# API DE JOGOS
+# ==========================================================
 
-def search_youtube(query):
+@app.post("/api/games")
+def games():
 
-    url = f"{YOUTUBE_URL}/search"
+    data = request.json
 
-    params = {
-        "key": YOUTUBE_API_KEY,
-        "part": "snippet",
-        "q": query,
-        "type": "video",
-        "maxResults": 10,
-        "order": "relevance"
-    }
+    names = data.get(
+        "games",
+        []
+    )
 
-    response = requests.get(url, params=params, timeout=15)
+    requirement_type = data.get(
+        "requirement_type",
+        "recommended"
+    )
+
+    results = []
+
+    for name in names[:3]:
+
+        try:
+
+            search = rawg_search(name)
+
+            if not search:
+
+                results.append({
+                    "name": name,
+                    "error": "Jogo não encontrado."
+                })
+
+                continue
+
+            game = rawg_game(
+                search["id"]
+            )
+
+            minimum_raw, recommended_raw = \
+                get_pc_requirements(game)
+
+            minimum = parse_requirements(
+                minimum_raw
+            )
+
+            recommended = parse_requirements(
+                recommended_raw
+            )
+
+            selected = (
+                minimum
+                if requirement_type == "minimum"
+                else recommended
+            )
+
+            results.append({
+
+                "name":
+                    game.get(
+                        "name",
+                        name
+                    ),
+
+                "image":
+                    game.get(
+                        "background_image"
+                    ),
+
+                "minimum":
+                    minimum,
+
+                "recommended":
+                    recommended,
+
+                "selected":
+                    selected
+
+            })
+
+        except Exception as e:
+
+            results.append({
+
+                "name": name,
+
+                "error": str(e)
+
+            })
+
+    return jsonify({
+        "games": results,
+        "requirement_type":
+            requirement_type
+    })
+
+
+# ==========================================================
+# YOUTUBE SEARCH
+# ==========================================================
+
+def youtube_search(query):
+
+    response = requests.get(
+        f"{YOUTUBE_URL}/search",
+        params={
+            "key":
+                YOUTUBE_API_KEY,
+
+            "part":
+                "snippet",
+
+            "q":
+                query,
+
+            "type":
+                "video",
+
+            "maxResults":
+                10,
+
+            "order":
+                "relevance"
+        },
+        timeout=15
+    )
+
     response.raise_for_status()
 
-    return response.json().get("items", [])
+    return response.json().get(
+        "items",
+        []
+    )
 
 
-def get_youtube_videos(video_ids):
+def youtube_videos(ids):
 
-    if not video_ids:
+    if not ids:
         return []
 
-    url = f"{YOUTUBE_URL}/videos"
+    response = requests.get(
+        f"{YOUTUBE_URL}/videos",
+        params={
+            "key":
+                YOUTUBE_API_KEY,
 
-    params = {
-        "key": YOUTUBE_API_KEY,
-        "part": "snippet,contentDetails,statistics",
-        "id": ",".join(video_ids)
-    }
+            "part":
+                "snippet",
 
-    response = requests.get(url, params=params, timeout=15)
+            "id":
+                ",".join(ids)
+        },
+        timeout=15
+    )
+
     response.raise_for_status()
 
-    return response.json().get("items", [])
+    return response.json().get(
+        "items",
+        []
+    )
 
 
-# ---------------------------------------------------------
+# ==========================================================
+# COMENTÁRIOS DO YOUTUBE
+# ==========================================================
+
+def youtube_comments(video_id):
+
+    try:
+
+        response = requests.get(
+
+            f"{YOUTUBE_URL}/commentThreads",
+
+            params={
+
+                "key":
+                    YOUTUBE_API_KEY,
+
+                "part":
+                    "snippet",
+
+                "videoId":
+                    video_id,
+
+                "maxResults":
+                    50,
+
+                "order":
+                    "relevance",
+
+                "textFormat":
+                    "plainText"
+
+            },
+
+            timeout=15
+        )
+
+        if response.status_code != 200:
+            return []
+
+        return response.json().get(
+            "items",
+            []
+        )
+
+    except Exception:
+
+        return []
+
+
+# ==========================================================
 # EXTRAÇÃO DE FPS
-# ---------------------------------------------------------
+# ==========================================================
 
 def extract_fps(text):
 
@@ -204,18 +438,35 @@ def extract_fps(text):
 
     patterns = [
 
-        # Average FPS: 72
-        r"(?:average|avg|average fps|avg fps)"
+        # Average FPS: 60
+        r"(?:average|avg|mean)"
+        r"[^0-9]{0,30}"
+        r"(\d+(?:\.\d+)?)"
+        r"\s*fps",
+
+        # 60 FPS average
+        r"(\d+(?:\.\d+)?)"
+        r"\s*fps"
+        r"[^a-z]{0,20}"
+        r"(?:average|avg|mean)",
+
+        # around 60 fps
+        r"(?:around|about|roughly)"
+        r"[^0-9]{0,10}"
+        r"(\d+(?:\.\d+)?)"
+        r"\s*fps",
+
+        # getting 60 fps
+        r"(?:getting|running|runs)"
         r"[^0-9]{0,20}"
-        r"(\d+(?:\.\d+)?)\s*fps",
+        r"(\d+(?:\.\d+)?)"
+        r"\s*fps",
 
-        # 72 FPS
-        r"(\d+(?:\.\d+)?)\s*fps",
-
-        # FPS: 72
+        # FPS: 60
         r"fps"
         r"[^0-9]{0,10}"
         r"(\d+(?:\.\d+)?)"
+
     ]
 
     values = []
@@ -225,169 +476,75 @@ def extract_fps(text):
         matches = re.findall(
             pattern,
             text,
-            flags=re.IGNORECASE
+            re.IGNORECASE
         )
 
         for value in matches:
 
             try:
+
                 fps = float(value)
 
-                # Evita números absurdos
-                if 10 <= fps <= 300:
+                if 15 <= fps <= 300:
                     values.append(fps)
 
-            except ValueError:
+            except:
                 pass
 
-    # Remove duplicados
-    return sorted(set(values))
+    return sorted(
+        set(values)
+    )
 
 
-# ---------------------------------------------------------
-# API: BUSCAR JOGOS
-# ---------------------------------------------------------
-
-@app.post("/api/games")
-def api_games():
-
-    data = request.json
-
-    games = data.get("games", [])
-
-    if not games:
-        return jsonify({
-            "error": "Nenhum jogo informado."
-        }), 400
-
-    results = []
-
-    for game_name in games[:3]:
-
-        try:
-
-            search_result = search_rawg_game(game_name)
-
-            if not search_result:
-                results.append({
-                    "query": game_name,
-                    "error": "Jogo não encontrado."
-                })
-
-                continue
-
-            game = get_rawg_game(search_result["id"])
-
-            requirements = extract_pc_requirements(game)
-
-            minimum = parse_requirement_text(
-                requirements["minimum"]
-            )
-
-            recommended = parse_requirement_text(
-                requirements["recommended"]
-            )
-
-            results.append({
-                "query": game_name,
-                "id": game["id"],
-                "name": game["name"],
-                "image": game.get("background_image"),
-                "minimum_raw": requirements["minimum"],
-                "recommended_raw": requirements["recommended"],
-                "minimum": minimum,
-                "recommended": recommended
-            })
-
-        except Exception as e:
-
-            results.append({
-                "query": game_name,
-                "error": str(e)
-            })
-
-    return jsonify({
-        "games": results
-    })
-
-
-# ---------------------------------------------------------
-# API: RECOMENDAÇÃO DO PC
-# ---------------------------------------------------------
-
-@app.post("/api/recommend")
-def recommend():
-
-    data = request.json
-
-    games = data.get("games", [])
-
-    # Esta versão usa uma regra simples:
-    # pega o último requisito informado para cada componente.
-    #
-    # Posteriormente podemos criar um comparador real
-    # de CPUs e GPUs.
-
-    cpu = None
-    gpu = None
-    ram = 0
-    storage = 0
-
-    sources = []
-
-    for game in games:
-
-        recommended = game.get("recommended", {})
-
-        if recommended.get("cpu"):
-            cpu = recommended["cpu"]
-            sources.append(
-                f"CPU de {game['name']}"
-            )
-
-        if recommended.get("gpu"):
-            gpu = recommended["gpu"]
-            sources.append(
-                f"GPU de {game['name']}"
-            )
-
-        if recommended.get("ram"):
-            ram = max(
-                ram,
-                int(recommended["ram"])
-            )
-
-        if recommended.get("storage"):
-            storage = max(
-                storage,
-                int(recommended["storage"])
-            )
-
-    return jsonify({
-        "cpu": cpu or "Não encontrado",
-        "gpu": gpu or "Não encontrado",
-        "ram": ram or None,
-        "storage": storage or None,
-        "sources": sources
-    })
-
-
-# ---------------------------------------------------------
-# API: BENCHMARK
-# ---------------------------------------------------------
+# ==========================================================
+# BENCHMARK
+# ==========================================================
 
 @app.post("/api/benchmark")
 def benchmark():
 
     data = request.json
 
-    game = data.get("game", "")
-    cpu = data.get("cpu", "")
-    gpu = data.get("gpu", "")
-    ram = data.get("ram", "")
-    resolution = data.get("resolution", "1080p")
-    quality = data.get("quality", "High")
-    target_fps = float(data.get("target_fps", 60))
+    game = data.get(
+        "game",
+        ""
+    )
+
+    cpu = data.get(
+        "cpu",
+        ""
+    )
+
+    gpu = data.get(
+        "gpu",
+        ""
+    )
+
+    ram = data.get(
+        "ram",
+        ""
+    )
+
+    resolution = data.get(
+        "resolution",
+        "1080p"
+    )
+
+    quality = data.get(
+        "quality",
+        "High"
+    )
+
+    target_fps = float(
+        data.get(
+            "target_fps",
+            60
+        )
+    )
+
+    # ------------------------------------------------------
+    # BUSCA
+    # ------------------------------------------------------
 
     query = (
         f"{game} "
@@ -400,24 +557,37 @@ def benchmark():
 
     try:
 
-        search_results = search_youtube(query)
+        search_results = youtube_search(
+            query
+        )
 
-        video_ids = []
+        ids = []
 
         for item in search_results:
 
-            video_id = (
-                item
-                .get("id", {})
-                .get("videoId")
+            video_id = item.get(
+                "id",
+                {}
+            ).get(
+                "videoId"
             )
 
             if video_id:
-                video_ids.append(video_id)
+                ids.append(
+                    video_id
+                )
 
-        videos = get_youtube_videos(video_ids)
+        videos = youtube_videos(
+            ids
+        )
 
-        benchmark_results = []
+        final_videos = []
+
+        # --------------------------------------------------
+        # PRIMEIRO: TÍTULO + DESCRIÇÃO
+        # --------------------------------------------------
+
+        needs_comments = []
 
         for video in videos:
 
@@ -436,40 +606,127 @@ def benchmark():
                 ""
             )
 
-            combined_text = (
-                title + "\n" + description
+            text = (
+                title
+                + "\n"
+                + description
             )
 
-            fps_values = extract_fps(
-                combined_text
+            fps = extract_fps(
+                text
             )
 
-            benchmark_results.append({
-                "id": video["id"],
-                "title": title,
-                "description": description[:500],
-                "channel": snippet.get(
-                    "channelTitle"
-                ),
-                "published": snippet.get(
-                    "publishedAt"
-                ),
+            result = {
+
+                "id":
+                    video["id"],
+
+                "title":
+                    title,
+
+                "channel":
+                    snippet.get(
+                        "channelTitle",
+                        ""
+                    ),
+
                 "thumbnail":
-                    snippet
-                    .get("thumbnails", {})
-                    .get("medium", {})
-                    .get("url"),
-                "fps": fps_values
-            })
+                    snippet.get(
+                        "thumbnails",
+                        {}
+                    ).get(
+                        "medium",
+                        {}
+                    ).get(
+                        "url"
+                    ),
+
+                "fps":
+                    fps,
+
+                "source":
+                    "description"
+
+            }
+
+            if fps:
+
+                final_videos.append(
+                    result
+                )
+
+            else:
+
+                needs_comments.append(
+                    result
+                )
+
+        # --------------------------------------------------
+        # SEGUNDO: COMENTÁRIOS
+        # --------------------------------------------------
+
+        for result in needs_comments:
+
+            comments = youtube_comments(
+                result["id"]
+            )
+
+            comment_fps = []
+
+            for comment in comments:
+
+                try:
+
+                    text = comment[
+                        "snippet"
+                    ][
+                        "topLevelComment"
+                    ][
+                        "snippet"
+                    ][
+                        "textDisplay"
+                    ]
+
+                    values = extract_fps(
+                        text
+                    )
+
+                    comment_fps.extend(
+                        values
+                    )
+
+                except:
+                    pass
+
+            if comment_fps:
+
+                result["fps"] = sorted(
+                    set(comment_fps)
+                )
+
+                result["source"] = \
+                    "comments"
+
+                final_videos.append(
+                    result
+                )
+
+        # --------------------------------------------------
+        # RESULTADO
+        # --------------------------------------------------
 
         all_fps = []
 
-        for video in benchmark_results:
-            all_fps.extend(video["fps"])
+        for video in final_videos:
+
+            all_fps.extend(
+                video["fps"]
+            )
 
         average = None
 
         if all_fps:
+
             average = statistics.mean(
                 all_fps
             )
@@ -477,8 +734,8 @@ def benchmark():
         if average is None:
 
             verdict = (
-                "Não foi possível extrair FPS "
-                "automaticamente."
+                "Não foram encontrados "
+                "dados suficientes."
             )
 
         elif average >= target_fps:
@@ -497,25 +754,17 @@ def benchmark():
 
         return jsonify({
 
-            "query": query,
+            "query":
+                query,
 
-            "configuration": {
-                "game": game,
-                "cpu": cpu,
-                "gpu": gpu,
-                "ram": ram,
-                "resolution": resolution,
-                "quality": quality,
-                "target_fps": target_fps
-            },
+            "average_fps":
+                average,
 
-            "average_fps": average,
+            "verdict":
+                verdict,
 
-            "fps_samples": all_fps,
-
-            "verdict": verdict,
-
-            "videos": benchmark_results
+            "videos":
+                final_videos
 
         })
 
@@ -525,6 +774,10 @@ def benchmark():
             "error": str(e)
         }), 500
 
+
+# ==========================================================
+# RUN
+# ==========================================================
 
 if __name__ == "__main__":
 
